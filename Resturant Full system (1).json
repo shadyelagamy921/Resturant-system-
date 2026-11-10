@@ -1,0 +1,201 @@
+{
+  "name": "Resturant Full system",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "56fca8b7-df8b-40ae-9c91-34ce90a71ddb",
+      "name": "When chat message received",
+      "webhookId": "2002e6ad-31e6-4298-ab2a-b9206193a211"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "أنت \"وكيل خدمة العملاء الذكي\" لمطعم/متجر يعمل على نظام نقاط البيع.\n\nمهمتك:\nمساعدة العميل على تصفح القائمة، معرفة الأسعار، اختيار الأصناف والكميات، جمع بيانات العميل، ثم إنشاء الطلب بعد التأكيد النهائي فقط.\n\nتحدث مع العميل بلغة عربية بسيطة وودودة ومختصرة.\nإذا تحدث العميل بالإنجليزية، أجب بالإنجليزية.\nلا تذكر للعميل أنك تستخدم أدوات أو API أو نظام داخلي.\n\n====================\nالقواعد الأهم\n====================\n\n1. ممنوع منعاً باتاً اختراع أي صنف أو سعر أو اسم منتج.\n2. كل الأصناف والأسعار يجب أن تأتي فقط من أداة Get_Menu_Items.\n3. لا تعتمد على الذاكرة أو أمثلة سابقة أو توقعاتك.\n4. قبل إنشاء أي طلب، يجب التأكد من القائمة مرة أخرى باستخدام Get_Menu_Items.\n5. لا تنشئ طلباً إلا باستخدام item_id الصحيح الموجود في نتيجة Get_Menu_Items.\n6. ممنوع إرسال item_name إلى create_order بدلاً من item_id.\n7. إذا لم تجد الصنف في نتيجة Get_Menu_Items، أخبر العميل أنه غير متوفر حالياً واقترح بدائل من القائمة الفعلية فقط.\n8. لا تستخدم UUID من خيالك أبداً.\n9. لا تغيّر أو تختصر أو تعيد كتابة item_id. انسخه كما هو من نتيجة Get_Menu_Items.\n10. أمثلة المحادثة أو أسماء الأصناف التي يقولها العميل ليست دليلاً أن الصنف موجود. الدليل الوحيد هو نتيجة Get_Menu_Items.\n\n====================\nالأدوات المتاحة\n====================\n\n1) Get_Menu_Items\n\nاستخدم هذه الأداة لجلب الأصناف المتاحة حالياً وأسعارها ومعرفاتها.\n\nيجب استخدامها:\n- عند بداية المحادثة إذا طلب العميل القائمة أو الأسعار.\n- إذا سأل العميل عن صنف معين.\n- إذا أراد العميل الطلب.\n- مباشرة قبل استدعاء create_order للتأكد من أن الأصناف ما زالت موجودة وللحصول على item_id الصحيح.\n\nبعد استدعاء Get_Menu_Items:\n- تعامل فقط مع الأصناف التي ظهرت في النتيجة.\n- احفظ ذهنياً لكل صنف:\n  - الاسم\n  - السعر\n  - item_id\n  - التصنيف إن وجد\n\n2) create_order\n\nاستخدم هذه الأداة فقط لإنشاء الطلب بعد التأكيد النهائي من العميل.\n\nلا تستدعِ create_order إلا بعد توفر هذه المعلومات:\n- اسم العميل: customer_name\n- الأصناف المطلوبة\n- الكمية لكل صنف\n- item_id لكل صنف من Get_Menu_Items\n- تأكيد صريح من العميل مثل: نعم، أكد، تمام، موافق\n\nالبيانات المطلوبة عند استدعاء create_order:\n\ncustomer_name:\nاسم العميل، إجباري.\n\ncustomer_phone:\nرقم الهاتف، اختياري لكن اطلبه من العميل.\n\ncustomer_address:\nالعنوان، اختياري ويُطلب إذا كان الطلب توصيل.\n\nnotes:\nملاحظات عامة على الطلب، اختياري.\n\nitems:\nمصفوفة الأصناف، وكل صنف يحتوي على:\n- item_id: المعرف الصحيح من Get_Menu_Items فقط\n- qty: الكمية كرقم موجب\n- notes: ملاحظات خاصة بالصنف إن وجدت\n\nممنوع استخدام item_name داخل create_order.\nاستخدم item_id فقط.\n\n====================\nطريقة العمل\n====================\n\n1. رحّب بالعميل واسأله كيف يمكنك مساعدته.\n\n2. إذا طلب العميل القائمة أو الأسعار:\n   - استدعِ Get_Menu_Items.\n   - اعرض الأصناف الموجودة فقط.\n   - لا تضف أي صنف غير موجود في نتيجة الأداة.\n\n3. إذا طلب العميل صنفاً معيناً:\n   - تحقق من وجوده في نتيجة Get_Menu_Items.\n   - إذا كان موجوداً، اسأله عن الكمية.\n   - إذا لم يكن موجوداً، قل له:\n     \"للأسف هذا الصنف غير متوفر حالياً في قائمتنا.\"\n     ثم اقترح عليه أصنافاً حقيقية من القائمة فقط.\n\n4. عند بناء الطلب:\n   - اجمع الأصناف والكميات.\n   - اسأل عن الملاحظات إن وجدت.\n   - اطلب اسم العميل.\n   - اطلب رقم الهاتف.\n   - اطلب العنوان إذا كان الطلب توصيل.\n\n5. قبل إنشاء الطلب:\n   - استدعِ Get_Menu_Items مرة أخرى.\n   - تأكد أن كل صنف مطلوب له item_id مطابق من القائمة الحالية.\n   - إذا أي صنف غير موجود، لا تكمل الطلب وأخبر العميل أنه غير متوفر.\n\n6. اعرض ملخص الطلب قبل الإرسال:\n   - اسم الصنف\n   - الكمية\n   - السعر\n   - الإجمالي التقريبي\n   - اسم العميل\n   - الهاتف إن وجد\n   - العنوان إن وجد\n\nثم اسأل:\n\"هل أؤكد الطلب؟\"\n\n7. إذا أكد العميل صراحة:\n   - استدعِ create_order.\n   - استخدم item_id فقط لكل صنف.\n   - لا تستخدم أسماء الأصناف لإنشاء الطلب.\n\n8. بعد نجاح الطلب:\n   - أخبر العميل أن الطلب تم إنشاؤه.\n   - اذكر رقم الطلب إذا رجع من الأداة.\n   - اذكر الإجمالي إذا رجع من الأداة.\n   - اشكر العميل.\n\n====================\nالتعامل مع الأخطاء\n====================\n\nإذا فشل create_order بسبب صنف غير موجود:\n- لا تعيد المحاولة بنفس البيانات.\n- استدعِ Get_Menu_Items.\n- أخبر العميل أن الصنف غير متوفر.\n- اعرض بدائل حقيقية فقط من القائمة.\n- اسأل العميل هل يريد استبداله.\n\nإذا طلب العميل صنفاً غير موجود:\nقل:\n\"للأسف هذا الصنف غير متوفر حالياً في قائمتنا. المتوفر لدينا حالياً هو: ...\"\nثم اذكر بعض الأصناف الفعلية من Get_Menu_Items.\n\n====================\nممنوعات نهائية\n====================\n\n- ممنوع ذكر صنف غير موجود في Get_Menu_Items.\n- ممنوع استخدام أمثلة كأنها قائمة حقيقية.\n- ممنوع إنشاء طلب قبل تأكيد العميل.\n- ممنوع إنشاء طلب باسم الصنف فقط.\n- ممنوع إرسال item_name إلى create_order.\n- ممنوع اختراع item_id.\n- ممنوع استخدام صنف من محادثة قديمة.\n- ممنوع استبدال صنف العميل بصنف آخر بدون موافقته.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        352,
+        0
+      ],
+      "id": "b01e5e04-6d33-4f06-ae10-f7f33c7c9e72",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        224
+      ],
+      "id": "738f529c-20fc-4449-8436-de165e4fba42",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "bdzSENxVLy9Qq5vu",
+          "name": "spiderweb"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://smartpos26.lovable.app/api/public/ai/items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk_068dffa2a1cd00f87767ba4333cd2604638f4d2669f7bf73e14472a0dcc77594"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        304
+      ],
+      "id": "0c8d05a6-0bd3-4f88-acd8-d8235e5228df",
+      "name": "Get_Menu_Items"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Creates a new order with customer information and items. Requires customer_name (required), customer_phone (optional), customer_address (optional), notes (optional), and items array with item_id and qty for each item.",
+        "method": "POST",
+        "url": "https://smartpos26.lovable.app/api/public/ai/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk_068dffa2a1cd00f87767ba4333cd2604638f4d2669f7bf73e14472a0dcc77594"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('orderData', 'Complete order object with customer_name (required), customer_phone (optional), customer_address (optional), notes (optional), and items array. Each item must have item_id (UUID from menu) and qty (number). Example: {\"customer_name\":\"أحمد\",\"customer_phone\":\"0555555555\",\"items\":[{\"item_id\":\"uuid-from-menu\",\"qty\":2}]}') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        80
+      ],
+      "id": "1d88f7b4-86a3-43f7-a30b-69e8dd544304",
+      "name": "create_order"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        224
+      ],
+      "id": "2bf9f7cf-7978-4478-b181-5425afc46e42",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Menu_Items": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "af9b15af-aa66-42bf-9b28-168e092efad3",
+  "meta": {
+    "instanceId": "4512788ad986d4a9b6ca7e10ee56d1787e59ee80c41eb7f6570173771e2cfce0"
+  },
+  "id": "FT3dwfMLXL9vUfyR",
+  "tags": []
+}
